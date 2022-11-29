@@ -50,6 +50,9 @@ export default function TabOneScreen({
   navigation,
 }: RootTabScreenProps<'TabOne'>) {
   const [searchedText, setSearchedText] = useState<string>()
+  const [provider, setProvider] = useState<
+    'googleBooksSearch' | 'openLibrarySearch'
+  >('googleBooksSearch')
 
   const {
     data: initialBooksData,
@@ -66,6 +69,24 @@ export default function TabOneScreen({
     getSearchBookDetails,
     { data: searchedBooksData, loading: searchingBookDetails },
   ] = useLazyQuery(query)
+
+  const parseBook = (item) => {
+    if (provider === 'googleBooksSearch') {
+      return {
+        title: item.volumeInfo.title,
+        image: item.volumeInfo.imageLinks?.thumbnail,
+        authors: item.volumeInfo.authors,
+        isbn: item.volumeInfo.industryIdentifiers?.[0]?.identifier,
+      }
+    } else {
+      return {
+        title: item.title,
+        authors: item.author_name,
+        image: `https://covers.openlibrary.org/b/olid/${item.cover_edition_key}-M.jpg`,
+        isbn: item.isbn?.[0],
+      }
+    }
+  }
 
   return (
     <View style={styles.container}>
@@ -91,23 +112,43 @@ export default function TabOneScreen({
           <Text style={{ color: Colors.light.tint }}>Search</Text>
         </TouchableOpacity>
       </View>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: 50,
+        }}>
+        <Text
+          style={
+            provider === 'googleBooksSearch'
+              ? { fontWeight: 'bold', color: 'royalblue' }
+              : {}
+          }
+          onPress={() => setProvider('googleBooksSearch')}>
+          Google Books
+        </Text>
+        <Text
+          style={
+            provider === 'openLibrarySearch'
+              ? { fontWeight: 'bold', color: 'royalblue' }
+              : {}
+          }
+          onPress={() => setProvider('openLibrarySearch')}>
+          Open Library
+        </Text>
+      </View>
       <FlatList
         data={
           !searchedText
             ? initialBooksData?.googleBooksSearch?.items
-            : searchedBooksData?.googleBooksSearch?.items || []
+            : provider === 'googleBooksSearch'
+            ? searchedBooksData?.googleBooksSearch?.items || []
+            : searchedBooksData?.openLibrarySearch?.docs || []
         }
         renderItem={({ item }) => {
           // console.log('Item ', item)
-          return (
-            <Book
-              book={{
-                title: item.volumeInfo.title,
-                image: item.volumeInfo.imageLinks.thumbnail,
-                authors: item.volumeInfo.authors,
-              }}
-            />
-          )
+          return <Book book={parseBook(item)} />
         }}
         showsVerticalScrollIndicator={false}
       />
